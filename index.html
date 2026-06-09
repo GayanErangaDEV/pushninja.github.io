@@ -155,7 +155,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(circle 
           <button class="ui-btn btn-wallet" id="btn-connect-wallet" onclick="connectWallet()">CONNECT EVM WALLET</button>
           <button class="ui-btn btn-start" id="btn-start-game" onclick="startGameNow()" disabled>START SLASHING</button>
         </div>
-        <div id="contract-notice">Scores stored in <a href="https://testnet.arcscan.app/" target="_blank"></a> on ARC Testnet</div>
+        <div id="contract-notice">Scores stored in <a href="https://testnet.arcscan.app/" target="_blank">ARC</a> on ARC Testnet</div>
       </div>
     </div>
 
@@ -180,14 +180,14 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(circle 
 <div id="tx-popup">
   <div class="tx-icon">&#9851;</div>
   <div class="tx-title">SAVE SCORE ON-CHAIN</div>
-  <div class="tx-sub">Your score will be written to the <strong style="color:#fff">Arc Blockchain</strong> on ARC Testnet.<br>Leaderboard reads directly from the blockchain!</div>
+  <div class="tx-sub">Your score will be written to the <strong style="color:#fff">PushNinja smart contract</strong> on ARC Testnet.<br>Leaderboard reads directly from the blockchain!</div>
   <div class="tx-score-box">
     <div class="tx-score-num" id="tx-score-num">0</div>
     <div class="tx-score-lbl">POINTS</div>
     <div class="tx-time-row" id="tx-time-row">Survived: 0:00</div>
   </div>
   <div class="tx-wallet-row" id="tx-wallet-row">Wallet: —</div>
-  <button class="tx-main-btn" id="tx-main-btn" onclick="submitScoreOnChain()">SUBMIT TO Arc Blockchain</button>
+  <button class="tx-main-btn" id="tx-main-btn" onclick="submitScoreOnChain()">SUBMIT TO Game Scores</button>
   <button class="tx-skip-btn" onclick="skipAndShowLB()">Skip — don't save on-chain</button>
   <div class="tx-progress" id="tx-progress"><div class="tx-progress-bar"><div class="tx-progress-fill"></div></div></div>
   <div id="tx-status"></div>
@@ -200,7 +200,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(circle 
   <div class="lb-top">
     <div>
       <h2>ARC Testnet Leaderboard</h2>
-      <div class="lb-sub">Live from Arc Blockchain </div>
+      <div class="lb-sub">Live from PushNinja smart contract</div>
     </div>
     <div class="lb-stats">
       <div class="lb-stat"><div class="lb-stat-num" id="lb-stat-players">0</div><div class="lb-stat-lbl">PLAYERS</div></div>
@@ -231,10 +231,10 @@ function encUint(n){ return BigInt(n).toString(16).padStart(64,'0'); }
    totalGamesPlayed()            -> 96e494e8
 */
 const SEL = {
-  submit:      'f8219683',
-  topScores:   'ae4f5eb4',
-  playerCount: 'c3e5e5e8',
-  totalGames:  '96e494e8'
+  submit:      '8358ba08',
+  topScores:   '968ffe34',
+  playerCount: 'c2e52206',
+  totalGames:  '5c492129'
 };
 
 function decodeTopScores(hex){
@@ -411,7 +411,7 @@ function openTxPopup(){
   document.getElementById('tx-status').style.color='var(--green)';
   document.getElementById('tx-progress').classList.remove('show');
   const btn=document.getElementById('tx-main-btn');
-  btn.disabled=false; btn.textContent='SUBMIT TO ARC Chain';
+  btn.disabled=false; btn.textContent='SUBMIT Game Scores';
   if(CONTRACT_ADDRESS==="DEPLOY_ADDRESS_HERE"){
     btn.disabled=true;
     document.getElementById('tx-status').style.color='#ff8800';
@@ -451,7 +451,7 @@ async function submitScoreOnChain(){
     prog.classList.remove('show');
     st.style.color='#ff4444';
     st.textContent=(e.code===4001)?'Rejected by user.':'Error: '+(e.message||'Unknown');
-    btn.disabled=false; btn.textContent='SUBMIT TO SMART CONTRACT';
+    btn.disabled=false; btn.textContent='Game Scores';
   }
 }
 
