@@ -411,7 +411,7 @@ function openTxPopup(){
   document.getElementById('tx-status').style.color='var(--green)';
   document.getElementById('tx-progress').classList.remove('show');
   const btn=document.getElementById('tx-main-btn');
-  btn.disabled=false; btn.textContent='SUBMIT TO SMART CONTRACT';
+  btn.disabled=false; btn.textContent='SUBMIT TO ARC Chain';
   if(CONTRACT_ADDRESS==="DEPLOY_ADDRESS_HERE"){
     btn.disabled=true;
     document.getElementById('tx-status').style.color='#ff8800';
