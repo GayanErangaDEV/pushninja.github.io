@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Push Ninja — ARC Testnet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--blue:#1a62ff;--green:#00cc88;--dark:#060b13;--mid:#0b121f;--gray:#4d596f;}
+body{width:100vw;height:100vh;overflow:hidden;display:flex;justify-content:center;align-items:center;background:var(--dark);font-family:'Rajdhani',sans-serif;position:relative;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,98,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,98,255,0.04) 1px,transparent 1px);background-size:48px 48px;animation:gridScroll 20s linear infinite;pointer-events:none;z-index:0;}
+@keyframes gridScroll{to{background-position:0 48px;}}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(circle at 10% 10%,rgba(26,98,255,0.12) 0%,transparent 40%),radial-gradient(circle at 90% 90%,rgba(0,204,136,0.10) 0%,transparent 40%);pointer-events:none;z-index:0;}
+#btn-logout{position:absolute;top:20px;left:20px;z-index:999;display:none;padding:10px 18px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.4);border-radius:8px;color:#ff4444;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+#btn-logout:hover{background:rgba(255,68,68,0.25);border-color:#ff4444;transform:translateY(-1px);}
+#ui-wrapper{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
+#hud{width:800px;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(11,18,31,0.97);border:1px solid rgba(26,98,255,0.28);border-bottom:none;border-radius:12px 12px 0 0;}
+.hud-label{font-size:10px;letter-spacing:2px;color:var(--gray);text-transform:uppercase;font-family:'Orbitron',sans-serif;}
+.hud-value{font-size:24px;font-weight:700;font-family:'Orbitron',sans-serif;}
+.score-val{color:var(--green);}.time-val{color:#fff;}
+#hearts{display:flex;gap:3px;align-items:center;}
+.heart{font-size:16px;transition:opacity 0.3s,transform 0.2s;}
+.heart.lost{opacity:0.15;transform:scale(0.75);filter:grayscale(1);}
+#hard-badge{display:none;padding:3px 10px;background:rgba(255,50,50,0.12);border:1px solid rgba(255,50,50,0.5);border-radius:4px;font-size:10px;letter-spacing:2px;color:#ff4444;font-family:'Orbitron',sans-serif;animation:badgePulse 1s ease-in-out infinite;}
+#hard-badge.show{display:block;}
+@keyframes badgePulse{0%,100%{opacity:1}50%{opacity:0.55}}
+#game-container{position:relative;width:800px;height:600px;border:1px solid rgba(26,98,255,0.3);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;box-shadow:0 0 50px rgba(26,98,255,0.12),0 0 80px rgba(0,0,0,0.6);}
+#slash-canvas{position:absolute;top:0;left:0;z-index:10;cursor:none;border-radius:0 0 12px 12px;}
+#dom-home-screen,#dom-gameover-overlay{position:absolute;inset:0;z-index:20;background:rgba(6,11,19,0.94);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;pointer-events:auto;}
+#dom-gameover-overlay{display:none;background:rgba(6,11,19,0.88);}
+.ui-panel{width:490px;background:var(--mid);border:1px solid rgba(26,98,255,0.45);border-radius:18px;padding:35px;text-align:center;box-shadow:0 0 40px rgba(26,98,255,0.15);position:relative;z-index:25;}
+.ui-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:18px 18px 0 0;}
+.ui-title{font-family:'Orbitron',sans-serif;font-size:36px;font-weight:900;margin-bottom:5px;letter-spacing:2px;color:#fff;}
+.ui-subtitle{font-size:13px;color:var(--gray);margin-bottom:22px;letter-spacing:1px;}
+#wallet-status{font-size:12px;color:var(--green);font-family:monospace;margin-top:-10px;margin-bottom:15px;word-break:break-all;min-height:16px;}
+.ui-buttons{display:flex;flex-direction:column;gap:12px;width:100%;}
+.ui-btn{width:100%;padding:14px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
+.btn-wallet{background:linear-gradient(135deg,#1a62ff,#0a40cc);color:#fff;border:none;}
+.btn-wallet:hover:not(:disabled){background:linear-gradient(135deg,#2a72ff,#1a62ff);transform:translateY(-1px);}
+.btn-wallet:disabled{opacity:0.6;cursor:not-allowed;}
+.btn-start{background:var(--green);color:#060b13;border:none;}
+.btn-start:hover:not(:disabled){background:#00ffaa;transform:translateY(-1px);}
+.btn-start:disabled{background:#1f293d;color:var(--gray);cursor:not-allowed;border:1px solid rgba(26,98,255,0.1);}
+#contract-notice{margin-top:12px;padding:7px 12px;border-radius:7px;background:rgba(0,204,136,0.05);border:1px solid rgba(0,204,136,0.15);font-size:10px;color:var(--gray);font-family:monospace;text-align:center;}
+#contract-notice a{color:var(--blue);text-decoration:none;}
+.go-panel{width:520px;}
+.go-label{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;color:var(--gray);text-transform:uppercase;}
+.go-score{font-family:'Orbitron',sans-serif;font-size:52px;font-weight:900;color:var(--green);margin-bottom:5px;}
+.go-time{font-size:16px;color:var(--gray);margin-bottom:20px;}
+.go-buttons{display:flex;gap:15px;justify-content:center;width:100%;margin-top:15px;}
+.go-btn{flex:1;padding:14px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;}
+.go-btn-primary{background:linear-gradient(135deg,var(--blue),#0a40cc);color:#fff;border:none;}
+.go-btn-primary:hover{background:linear-gradient(135deg,#2a72ff,#1a62ff);transform:translateY(-1px);}
+/* TX POPUP */
+#tx-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.9);z-index:200;width:490px;background:var(--mid);border:1px solid rgba(26,98,255,0.5);border-radius:18px;padding:30px;text-align:center;box-shadow:0 0 80px rgba(26,98,255,0.3);opacity:0;pointer-events:none;transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+#tx-popup.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1);}
+#tx-popup::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:18px 18px 0 0;}
+#tx-popup-backdrop{display:none;position:fixed;inset:0;z-index:199;background:rgba(6,11,19,0.75);backdrop-filter:blur(6px);}
+#tx-popup-backdrop.open{display:block;}
+.tx-icon{font-size:44px;margin-bottom:8px;}
+.tx-title{font-family:'Orbitron',sans-serif;font-size:17px;font-weight:900;color:#fff;margin-bottom:6px;}
+.tx-sub{font-size:12px;color:var(--gray);margin-bottom:18px;line-height:1.7;}
+.tx-score-box{background:rgba(0,204,136,0.07);border:1px solid rgba(0,204,136,0.2);border-radius:12px;padding:14px;margin-bottom:16px;}
+.tx-score-num{font-family:'Orbitron',sans-serif;font-size:42px;font-weight:900;color:var(--green);}
+.tx-score-lbl{font-size:10px;color:var(--gray);letter-spacing:2px;}
+.tx-time-row{font-size:12px;color:var(--gray);margin-top:4px;}
+.tx-wallet-row{font-size:11px;color:var(--gray);font-family:monospace;margin-bottom:16px;}
+.tx-main-btn{width:100%;padding:14px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;border-radius:10px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;background:linear-gradient(135deg,var(--blue),#0a40cc);color:#fff;border:none;margin-bottom:10px;}
+.tx-main-btn:hover:not(:disabled){background:linear-gradient(135deg,#2a72ff,#1a62ff);transform:translateY(-1px);}
+.tx-main-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.tx-skip-btn{width:100%;padding:10px;font-family:'Orbitron',sans-serif;font-size:11px;border-radius:8px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;background:transparent;color:var(--gray);border:1px solid rgba(77,89,111,0.3);}
+.tx-skip-btn:hover{color:#fff;border-color:rgba(255,255,255,0.3);}
+.tx-progress{display:none;margin-top:12px;}
+.tx-progress.show{display:block;}
+.tx-progress-bar{height:3px;background:rgba(26,98,255,0.15);border-radius:2px;overflow:hidden;}
+.tx-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:2px;animation:txProg 1.8s ease-in-out infinite;}
+@keyframes txProg{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+#tx-status{font-size:12px;min-height:16px;margin-top:10px;font-family:monospace;}
+/* LEADERBOARD */
+#lb-btn{padding:6px 14px;border-radius:6px;background:rgba(0,204,136,0.1);border:1px solid rgba(0,204,136,0.35);color:var(--green);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1px;transition:all 0.2s;}
+#lb-btn:hover{background:rgba(0,204,136,0.22);}
+#lb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:rgba(6,11,19,0.82);backdrop-filter:blur(4px);}
+#lb-backdrop.open{display:block;}
+#lb-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.94);width:580px;background:var(--mid);border:1px solid rgba(26,98,255,0.45);border-radius:16px;padding:28px;box-shadow:0 0 60px rgba(26,98,255,0.2);z-index:100;opacity:0;pointer-events:none;transition:all 0.28s;}
+#lb-panel.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1);}
+#lb-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:16px 16px 0 0;}
+.lb-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+#lb-panel h2{font-family:'Orbitron',sans-serif;font-size:15px;letter-spacing:2px;color:var(--green);}
+.lb-sub{font-size:11px;color:var(--gray);margin-top:3px;}
+.lb-stats{display:flex;gap:18px;}
+.lb-stat{text-align:center;}
+.lb-stat-num{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:var(--blue);}
+.lb-stat-lbl{font-size:9px;color:var(--gray);letter-spacing:1px;}
+#lb-entries{list-style:none;margin-bottom:12px;max-height:340px;overflow-y:auto;}
+#lb-entries::-webkit-scrollbar{width:3px;}
+#lb-entries::-webkit-scrollbar-thumb{background:var(--gray);border-radius:2px;}
+.lb-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;margin-bottom:5px;background:rgba(26,98,255,0.04);border:1px solid rgba(26,98,255,0.09);transition:background 0.2s;}
+.lb-row:hover{background:rgba(26,98,255,0.1);}
+.lb-row.me{background:rgba(0,204,136,0.07);border-color:rgba(0,204,136,0.3);}
+.lb-rank{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;text-align:center;color:var(--gray);}
+.lb-rank.gold{color:#ffd700;}.lb-rank.silver{color:#c0c0c0;}.lb-rank.bronze{color:#cd7f32;}
+.lb-short{font-size:13px;color:#fff;font-family:monospace;display:block;}
+.lb-full{font-size:9px;color:#444;font-family:monospace;display:block;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;}
+.lb-badge{font-size:8px;color:var(--blue);background:rgba(26,98,255,0.1);border:1px solid rgba(26,98,255,0.22);padding:2px 6px;border-radius:3px;display:inline-block;margin-top:3px;letter-spacing:1px;}
+.lb-right{text-align:right;}
+.lb-pts{font-family:'Orbitron',sans-serif;font-size:17px;font-weight:700;color:var(--green);display:block;}
+.lb-ttime{font-size:10px;color:var(--gray);display:block;margin-top:2px;}
+#lb-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--gray);cursor:pointer;font-size:20px;transition:color 0.2s;}
+#lb-close:hover{color:#fff;}
+.lb-refresh{width:100%;padding:8px;border-radius:7px;background:rgba(26,98,255,0.08);border:1px solid rgba(26,98,255,0.25);color:var(--blue);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1px;transition:all 0.2s;}
+.lb-refresh:hover{background:rgba(26,98,255,0.18);}
+#lb-msg{font-size:10px;color:var(--gray);text-align:center;min-height:14px;margin-top:8px;}
+#sword-cursor{position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%) rotate(-45deg);font-size:28px;filter:drop-shadow(0 0 8px rgba(26,98,255,0.8));display:none;}
+</style>
+</head>
+<body>
+<div id="sword-cursor">⚔️</div>
+<button id="btn-logout" onclick="logoutWallet()">🔴 LOGOUT</button>
+
+<div id="ui-wrapper">
+  <div id="hud" style="display:none;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div class="hud-label">Score</div>
+      <div class="hud-value score-val" id="hud-score">0</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div id="hearts"></div>
+      <div id="hard-badge">HARD MODE</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <div class="hud-label">Time</div>
+      <div class="hud-value time-val" id="hud-time">0:00</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div class="hud-label" style="font-size:9px;letter-spacing:2px;color:var(--gray);font-family:'Orbitron',sans-serif">ARC Testnet</div>
+      <button id="lb-btn" onclick="openLeaderboard()">LEADERBOARD</button>
+    </div>
+  </div>
+
+  <div id="game-container">
+    <div id="phaser-host"></div>
+    <canvas id="slash-canvas" width="800" height="600"></canvas>
+
+    <div id="dom-home-screen">
+      <div class="ui-panel">
+        <div class="ui-title">PUSH NINJA</div>
+        <div class="ui-subtitle">ARC Testnet · On-Chain Leaderboard</div>
+        <div id="wallet-status">Connect your EVM wallet to play and save scores on-chain</div>
+        <div class="ui-buttons">
+          <button class="ui-btn btn-wallet" id="btn-connect-wallet" onclick="connectWallet()">CONNECT EVM WALLET</button>
+          <button class="ui-btn btn-start" id="btn-start-game" onclick="startGameNow()" disabled>START SLASHING</button>
+        </div>
+        <div id="contract-notice">Scores stored in <a href="https://testnet.arcscan.app/" target="_blank">PushNinja smart contract</a> on ARC Testnet</div>
+      </div>
+    </div>
+
+    <div id="dom-gameover-overlay">
+      <div class="go-panel ui-panel">
+        <div class="ui-title" style="color:#ff4444;">GAME OVER</div>
+        <div class="go-label">Final Score</div>
+        <div class="go-score" id="go-final-score">0</div>
+        <div class="go-time" id="go-final-time">Survived: 0:00</div>
+        <div id="auto-submit-status" style="font-size:12px;color:var(--green);margin-bottom:8px;font-family:monospace;"></div>
+        <div class="go-buttons">
+          <button class="go-btn go-btn-primary" onclick="restartGame()">PLAY AGAIN</button>
+          <button class="go-btn" style="background:rgba(0,204,136,0.1);border:1px solid rgba(0,204,136,0.3);color:var(--green);" onclick="openLeaderboard()">LEADERBOARD</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TX POPUP -->
+<div id="tx-popup-backdrop"></div>
+<div id="tx-popup">
+  <div class="tx-icon">&#9851;</div>
+  <div class="tx-title">SAVE SCORE ON-CHAIN</div>
+  <div class="tx-sub">Your score will be written to the <strong style="color:#fff">PushNinja smart contract</strong> on ARC Testnet.<br>Leaderboard reads directly from the blockchain!</div>
+  <div class="tx-score-box">
+    <div class="tx-score-num" id="tx-score-num">0</div>
+    <div class="tx-score-lbl">POINTS</div>
+    <div class="tx-time-row" id="tx-time-row">Survived: 0:00</div>
+  </div>
+  <div class="tx-wallet-row" id="tx-wallet-row">Wallet: —</div>
+  <button class="tx-main-btn" id="tx-main-btn" onclick="submitScoreOnChain()">SUBMIT TO SMART CONTRACT</button>
+  <button class="tx-skip-btn" onclick="skipAndShowLB()">Skip — don't save on-chain</button>
+  <div class="tx-progress" id="tx-progress"><div class="tx-progress-bar"><div class="tx-progress-fill"></div></div></div>
+  <div id="tx-status"></div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="lb-backdrop" onclick="closeLeaderboard()"></div>
+<div id="lb-panel">
+  <button id="lb-close" onclick="closeLeaderboard()">&#10005;</button>
+  <div class="lb-top">
+    <div>
+      <h2>ARC Testnet Leaderboard</h2>
+      <div class="lb-sub">Live from PushNinja smart contract</div>
+    </div>
+    <div class="lb-stats">
+      <div class="lb-stat"><div class="lb-stat-num" id="lb-stat-players">0</div><div class="lb-stat-lbl">PLAYERS</div></div>
+      <div class="lb-stat"><div class="lb-stat-num" id="lb-stat-games">0</div><div class="lb-stat-lbl">GAMES</div></div>
+    </div>
+  </div>
+  <ul id="lb-entries"><li style="color:var(--gray);font-size:13px;text-align:center;padding:22px;">Loading from blockchain...</li></ul>
+  <button class="lb-refresh" onclick="loadLeaderboard()">REFRESH FROM CHAIN</button>
+  <div id="lb-msg"></div>
+</div>
+
+<script>
+/* =================================================
+   CONTRACT CONFIG
+   Deploy PushNinjaScores.sol on ARC Testnet
+   then paste the address below
+   ================================================= */
+const CONTRACT_ADDRESS = "DEPLOY_ADDRESS_HERE";
+const ARC_RPC = "https://rpc.testnet.arc.network";
+
+/* --- ABI encode helpers (no ethers needed) --- */
+function encUint(n){ return BigInt(n).toString(16).padStart(64,'0'); }
+
+/* Precomputed 4-byte selectors:
+   submitScore(uint256,uint256)  -> f8219683
+   getTopScores(uint256)         -> ae4f5eb4
+   getPlayerCount()              -> c3e5e5e8
+   totalGamesPlayed()            -> 96e494e8
+*/
+const SEL = {
+  submit:      'f8219683',
+  topScores:   'ae4f5eb4',
+  playerCount: 'c3e5e5e8',
+  totalGames:  '96e494e8'
+};
+
+function decodeTopScores(hex){
+  if(!hex||hex==='0x') return {addrs:[],scores:[],times:[],stamps:[]};
+  const d = hex.slice(2);
+  const off = [0,1,2,3].map(i => parseInt(d.slice(i*64,(i+1)*64),16)*2);
+  function arr(o){
+    const len = parseInt(d.slice(o,o+64),16);
+    return Array.from({length:len},(_,i)=>d.slice(o+64+i*64,o+64+(i+1)*64));
+  }
+  return {
+    addrs:  arr(off[0]).map(h=>'0x'+h.slice(24)),
+    scores: arr(off[1]).map(h=>parseInt(h,16)),
+    times:  arr(off[2]).map(h=>parseInt(h,16)),
+    stamps: arr(off[3]).map(h=>parseInt(h,16))
+  };
+}
+function decUint(hex){ return (hex&&hex!=='0x')?parseInt(hex.slice(2),16):0; }
+
+async function rpcCall(data){
+  const r = await fetch(ARC_RPC,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:CONTRACT_ADDRESS,data},'latest']})
+  });
+  const j = await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return j.result;
+}
+
+/* =================================================
+   WALLET
+   ================================================= */
+let userWallet="", provider=null;
+const ARC_CHAIN={
+  chainId:'0x4cef52',chainName:'ARC Testnet',
+  nativeCurrency:{name:'USD Coin',symbol:'USDC',decimals:18},
+  rpcUrls:[ARC_RPC],blockExplorerUrls:['https://testnet.arcscan.app/']
+};
+
+async function connectWallet(){
+  const st  = document.getElementById('wallet-status');
+  const sb  = document.getElementById('btn-start-game');
+  const cb  = document.getElementById('btn-connect-wallet');
+  provider  = window.ethereum||(window.web3&&window.web3.currentProvider)||null;
+  if(window.ethereum&&window.ethereum.providers&&window.ethereum.providers.length)
+    provider = window.ethereum.providers.find(p=>p.isMetaMask)||window.ethereum.providers[0];
+  if(!provider){st.style.color='#ff4444';st.textContent='No EVM wallet found!';return;}
+  try{
+    st.style.color='#fff'; st.textContent='Connecting...';
+    const accs = await provider.request({method:'eth_requestAccounts'});
+    userWallet = accs[0];
+    st.textContent='Switching to ARC Testnet...';
+    try{
+      await provider.request({method:'wallet_switchEthereumChain',params:[{chainId:ARC_CHAIN.chainId}]});
+    }catch(sw){
+      if(sw.code===4902||(sw.data&&sw.data.originalError&&sw.data.originalError.code===4902))
+        await provider.request({method:'wallet_addEthereumChain',params:[ARC_CHAIN]});
+      else{st.style.color='#ff4444';st.textContent='Network switch failed.';return;}
+    }
+    st.style.color='var(--green)';
+    st.textContent='Connected: '+userWallet.slice(0,6)+'...'+userWallet.slice(-4);
+    sb.disabled=false; cb.textContent='CONNECTED'; cb.disabled=true;
+    document.getElementById('btn-logout').style.display='block';
+  }catch(e){st.style.color='#ff4444';st.textContent='Declined by user.';}
+}
+
+function logoutWallet(){
+  userWallet=""; isGameRunning=false; isGameOver=false;
+  document.getElementById('wallet-status').style.color='var(--gray)';
+  document.getElementById('wallet-status').textContent='Connect your EVM wallet to play and save scores on-chain';
+  document.getElementById('btn-start-game').disabled=true;
+  document.getElementById('btn-connect-wallet').textContent='CONNECT EVM WALLET';
+  document.getElementById('btn-connect-wallet').disabled=false;
+  document.getElementById('btn-logout').style.display='none';
+  document.getElementById('dom-gameover-overlay').style.display='none';
+  document.getElementById('dom-home-screen').style.display='flex';
+  document.getElementById('hud').style.display='none';
+  hudScore(0); hudTime(0); updateHearts(10); setHardMode(false);
+  if(game&&game.scene&&game.scene.scenes[0]) game.scene.scenes[0].scene.restart();
+}
+
+function startGameNow(){
+  document.getElementById('dom-home-screen').style.display='none';
+  document.getElementById('hud').style.display='flex';
+  isGameRunning=true;
+  activateSwordCursor();
+  if(game&&game.scene&&game.scene.scenes[0]) game.scene.scenes[0].scene.restart();
+}
+
+/* =================================================
+   LEADERBOARD — reads live from blockchain
+   ================================================= */
+async function loadLeaderboard(){
+  const ul  = document.getElementById('lb-entries');
+  const msg = document.getElementById('lb-msg');
+  ul.innerHTML='<li style="color:var(--gray);font-size:13px;text-align:center;padding:22px;">Fetching from ARC Testnet...</li>';
+  msg.textContent='';
+
+  if(CONTRACT_ADDRESS==="DEPLOY_ADDRESS_HERE"){
+    ul.innerHTML='<li style="color:#ff8800;font-size:12px;text-align:center;padding:22px;line-height:1.9;">Contract not deployed yet.<br><span style="color:var(--gray)">PushNinjaScores.sol deploy kara<br>CONTRACT_ADDRESS update karanna.</span></li>';
+    return;
+  }
+  try{
+    const [pcHex,tgHex] = await Promise.all([
+      rpcCall('0x'+SEL.playerCount),
+      rpcCall('0x'+SEL.totalGames)
+    ]);
+    const pc=decUint(pcHex), tg=decUint(tgHex);
+    document.getElementById('lb-stat-players').textContent=pc;
+    document.getElementById('lb-stat-games').textContent=tg;
+
+    if(!pc){
+      ul.innerHTML='<li style="color:var(--gray);font-size:13px;text-align:center;padding:22px;">No scores yet! Be the first ninja.</li>';
+      return;
+    }
+    const n = Math.min(pc,20);
+    const raw = await rpcCall('0x'+SEL.topScores+encUint(n));
+    const {addrs,scores,times,stamps} = decodeTopScores(raw);
+
+    if(!addrs.length){
+      ul.innerHTML='<li style="color:var(--gray);font-size:13px;text-align:center;padding:22px;">No data returned.</li>';
+      return;
+    }
+    ul.innerHTML = addrs.map((addr,i)=>{
+      const rc = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      const ri = i===0?'#1':i===1?'#2':i===2?'#3':'#'+(i+1);
+      const medal = i===0?'&#129351;':i===1?'&#129352;':i===2?'&#129353;':'';
+      const m = Math.floor(times[i]/60), s = times[i]%60;
+      const short = addr.slice(0,8)+'...'+addr.slice(-6);
+      const isMe = userWallet&&addr.toLowerCase()===userWallet.toLowerCase();
+      const dt = stamps[i]?new Date(stamps[i]*1000).toLocaleDateString():'';
+      return '<li class="lb-row'+(isMe?' me':'')+'">'+
+        '<span class="lb-rank '+rc+'">'+(medal||ri)+'</span>'+
+        '<div>'+
+          '<span class="lb-short">'+short+(isMe?' (YOU)':'')+'</span>'+
+          '<span class="lb-full">'+addr+'</span>'+
+          '<span class="lb-badge">ON-CHAIN'+(dt?' &middot; '+dt:'')+'</span>'+
+        '</div>'+
+        '<div class="lb-right">'+
+          '<span class="lb-pts">'+scores[i].toLocaleString()+'</span>'+
+          '<span class="lb-ttime">'+m+':'+(s<10?'0':'')+s+'</span>'+
+        '</div>'+
+      '</li>';
+    }).join('');
+    msg.textContent='Updated: '+new Date().toLocaleTimeString();
+  }catch(e){
+    ul.innerHTML='<li style="color:#ff4444;font-size:12px;text-align:center;padding:22px;">Chain read failed: '+e.message+'</li>';
+  }
+}
+
+function openLeaderboard(){
+  document.getElementById('lb-backdrop').classList.add('open');
+  document.getElementById('lb-panel').classList.add('open');
+  loadLeaderboard();
+}
+function closeLeaderboard(){
+  document.getElementById('lb-backdrop').classList.remove('open');
+  document.getElementById('lb-panel').classList.remove('open');
+}
+
+/* =================================================
+   TX POPUP — submit score to contract
+   ================================================= */
+let currentScore=0, currentTime=0;
+
+function openTxPopup(){
+  const m=Math.floor(currentTime/60), s=currentTime%60;
+  document.getElementById('tx-score-num').textContent=currentScore.toLocaleString();
+  document.getElementById('tx-time-row').textContent='Survived: '+m+':'+(s<10?'0':'')+s;
+  document.getElementById('tx-wallet-row').textContent=userWallet
+    ?'Wallet: '+userWallet.slice(0,10)+'...'+userWallet.slice(-8)
+    :'Wallet: Not connected';
+  document.getElementById('tx-status').textContent='';
+  document.getElementById('tx-status').style.color='var(--green)';
+  document.getElementById('tx-progress').classList.remove('show');
+  const btn=document.getElementById('tx-main-btn');
+  btn.disabled=false; btn.textContent='SUBMIT TO SMART CONTRACT';
+  if(CONTRACT_ADDRESS==="DEPLOY_ADDRESS_HERE"){
+    btn.disabled=true;
+    document.getElementById('tx-status').style.color='#ff8800';
+    document.getElementById('tx-status').textContent='Contract not deployed yet — update CONTRACT_ADDRESS';
+  }
+  document.getElementById('tx-popup-backdrop').classList.add('open');
+  document.getElementById('tx-popup').classList.add('open');
+}
+function closeTxPopup(){
+  document.getElementById('tx-popup-backdrop').classList.remove('open');
+  document.getElementById('tx-popup').classList.remove('open');
+}
+function skipAndShowLB(){ closeTxPopup(); setTimeout(openLeaderboard,400); }
+
+async function submitScoreOnChain(){
+  const btn  = document.getElementById('tx-main-btn');
+  const st   = document.getElementById('tx-status');
+  const prog = document.getElementById('tx-progress');
+  if(!userWallet||!provider){st.style.color='#ff4444';st.textContent='Wallet not connected!';return;}
+  if(CONTRACT_ADDRESS==="DEPLOY_ADDRESS_HERE"){st.style.color='#ff8800';st.textContent='Deploy contract first!';return;}
+
+  btn.disabled=true; btn.textContent='Confirm in wallet...';
+  st.style.color='#aaa'; st.textContent='Waiting for wallet confirmation...';
+  prog.classList.add('show');
+  try{
+    // submitScore(uint256 _score, uint256 _timeSurvived)
+    const data='0x'+SEL.submit+encUint(currentScore)+encUint(currentTime);
+    const txHash = await provider.request({
+      method:'eth_sendTransaction',
+      params:[{from:userWallet,to:CONTRACT_ADDRESS,value:'0x0',data:data,gas:'0x30d40'}]
+    });
+    btn.textContent='Confirming on chain...';
+    st.style.color='var(--green)';
+    st.textContent='TX: '+txHash.slice(0,14)+'...'+txHash.slice(-8);
+    setTimeout(()=>{prog.classList.remove('show');closeTxPopup();setTimeout(openLeaderboard,500);},2500);
+  }catch(e){
+    prog.classList.remove('show');
+    st.style.color='#ff4444';
+    st.textContent=(e.code===4001)?'Rejected by user.':'Error: '+(e.message||'Unknown');
+    btn.disabled=false; btn.textContent='SUBMIT TO SMART CONTRACT';
+  }
+}
+
+function autoSubmitScore(){
+  document.getElementById('auto-submit-status').style.color='var(--green)';
+  document.getElementById('auto-submit-status').textContent='Submit score on-chain?';
+  setTimeout(openTxPopup,900);
+}
+
+/* =================================================
+   HEARTS UI
+   ================================================= */
+const TOTAL_LIVES=10;
+function initHearts(){
+  const c=document.getElementById('hearts'); c.innerHTML='';
+  for(let i=0;i<TOTAL_LIVES;i++){
+    const d=document.createElement('div'); d.className='heart'; d.id='h'+i; d.textContent='❤️'; c.appendChild(d);
+  }
+}
+function updateHearts(l){for(let i=0;i<TOTAL_LIVES;i++){const h=document.getElementById('h'+i);if(h)h.classList.toggle('lost',i>=l);}}
+initHearts();
+
+/* =================================================
+   SWORD CURSOR
+   ================================================= */
+function activateSwordCursor(){
+  const sw=document.getElementById('sword-cursor');
+  const gc=document.getElementById('game-container');
+  sw.style.display='block';
+  gc.addEventListener('mousemove',e=>{sw.style.left=e.clientX+'px';sw.style.top=e.clientY+'px';});
+  gc.addEventListener('mouseleave',()=>{sw.style.display='none';});
+  gc.addEventListener('mouseenter',()=>{sw.style.display='block';});
+}
+
+/* =================================================
+   SLASH CANVAS — sword trail
+   ================================================= */
+const slashCv=document.getElementById('slash-canvas');
+const slashCtx=slashCv.getContext('2d');
+let trailPts=[],pointerDown=false,prevX=0,prevY=0;
+const sliceQueue=[];
+
+function cvCoords(e){
+  const r=slashCv.getBoundingClientRect(),sx=800/r.width,sy=600/r.height;
+  const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-r.left)*sx,y:(src.clientY-r.top)*sy};
+}
+function onDown(e){if(isGameOver||!isGameRunning)return;pointerDown=true;trailPts=[];const c=cvCoords(e);prevX=c.x;prevY=c.y;trailPts.push({x:c.x,y:c.y,t:Date.now()});e.preventDefault();}
+function onMove(e){
+  if(!pointerDown||isGameOver||!isGameRunning)return;
+  const c=cvCoords(e);sliceQueue.push({x1:prevX,y1:prevY,x2:c.x,y2:c.y});
+  prevX=c.x;prevY=c.y;const now=Date.now();
+  trailPts.push({x:c.x,y:c.y,t:now});
+  trailPts=trailPts.filter(p=>now-p.t<420);
+  e.preventDefault();
+}
+function onUp(e){pointerDown=false;trailPts=[];if(!isGameOver&&isGameRunning)e.preventDefault();}
+slashCv.addEventListener('mousedown',onDown);
+slashCv.addEventListener('mousemove',onMove);
+slashCv.addEventListener('mouseup',onUp);
+slashCv.addEventListener('mouseleave',onUp);
+slashCv.addEventListener('touchstart',onDown,{passive:false});
+slashCv.addEventListener('touchmove',onMove,{passive:false});
+slashCv.addEventListener('touchend',onUp,{passive:false});
+
+function drawTrailLoop(){
+  slashCtx.clearRect(0,0,800,600);
+  const now=Date.now();
+  if(trailPts.length>=2){
+    // Outer glow
+    for(let i=1;i<trailPts.length;i++){
+      const p0=trailPts[i-1],p1=trailPts[i];
+      const age=(now-p1.t)/420,alpha=Math.max(0,1-age);
+      const w=Math.max(1,14*(1-age)*(i/trailPts.length));
+      slashCtx.beginPath();slashCtx.moveTo(p0.x,p0.y);slashCtx.lineTo(p1.x,p1.y);
+      slashCtx.strokeStyle='rgba(26,98,255,'+(alpha*0.22)+')';slashCtx.lineWidth=w*2;slashCtx.lineCap='round';slashCtx.stroke();
+    }
+    // Core blade
+    for(let i=1;i<trailPts.length;i++){
+      const p0=trailPts[i-1],p1=trailPts[i];
+      const age=(now-p1.t)/420,alpha=Math.max(0,1-age);
+      const w=Math.max(1,8*(1-age)*(i/trailPts.length));
+      slashCtx.beginPath();slashCtx.moveTo(p0.x,p0.y);slashCtx.lineTo(p1.x,p1.y);
+      slashCtx.strokeStyle='rgba(100,200,255,'+(alpha*0.9)+')';slashCtx.lineWidth=w;slashCtx.lineCap='round';slashCtx.stroke();
+    }
+    // Bright edge
+    for(let i=1;i<trailPts.length;i++){
+      const p0=trailPts[i-1],p1=trailPts[i];
+      const age=(now-p1.t)/420,alpha=Math.max(0,1-age);
+      const w=Math.max(0.5,2.5*(1-age));
+      slashCtx.beginPath();slashCtx.moveTo(p0.x,p0.y);slashCtx.lineTo(p1.x,p1.y);
+      slashCtx.strokeStyle='rgba(255,255,255,'+(alpha*0.95)+')';slashCtx.lineWidth=w;slashCtx.lineCap='round';slashCtx.stroke();
+    }
+  }
+  requestAnimationFrame(drawTrailLoop);
+}
+drawTrailLoop();
+
+function hudScore(s){currentScore=s;document.getElementById('hud-score').textContent=s.toLocaleString();}
+function hudTime(t){currentTime=t;const m=Math.floor(t/60),s=t%60;document.getElementById('hud-time').textContent=m+':'+(s<10?'0':'')+s;}
+function setHardMode(on){document.getElementById('hard-badge').classList.toggle('show',on);}
+function restartGame(){document.getElementById('dom-gameover-overlay').style.display='none';if(pScene)pScene.scene.restart();}
+
+/* =================================================
+   PHASER GAME ENGINE
+   ================================================= */
+const GW=800,GH=600;
+let score=0,lives=10,gameTime=0,isGameOver=false,hardMode=false,isGameRunning=false;
+let fruits,bombs,spawnTimer,clockTimer,spawnDelay=900,pScene;
+
+const phaserCfg={
+  type:Phaser.AUTO,width:GW,height:GH,parent:'phaser-host',backgroundColor:'#060b13',
+  scale:{mode:Phaser.Scale.NONE,autoCenter:Phaser.Scale.NONE},
+  input:{mouse:false,touch:false},
+  physics:{default:'arcade',arcade:{gravity:{y:140},debug:false}},
+  scene:{preload,create,update}
+};
+const game=new Phaser.Game(phaserCfg);
+function preload(){}
+
+function create(){
+  pScene=this;
+  isGameOver=false;score=0;lives=10;gameTime=0;spawnDelay=900;hardMode=false;
+  sliceQueue.length=0;
+  hudScore(0);hudTime(0);updateHearts(10);setHardMode(false);
+  document.getElementById('dom-gameover-overlay').style.display='none';
+  if(!isGameRunning){this.physics.pause();return;}
+  this.physics.resume();
+
+  // Fruit textures 76px
+  [{c:0x00cc88,h:0x00ffaa,s:0x004433,n:'f0'},
+   {c:0xff6b35,h:0xffaa77,s:0x662200,n:'f1'},
+   {c:0xffcc00,h:0xffe566,s:0x664400,n:'f2'},
+   {c:0xcc44ff,h:0xdd88ff,s:0x440066,n:'f3'},
+   {c:0xff3388,h:0xff77bb,s:0x660033,n:'f4'},
+   {c:0x44aaff,h:0x88ccff,s:0x002266,n:'f5'}]
+  .forEach(function(o){
+    const g=this.make.graphics({x:0,y:0,add:false});
+    g.fillStyle(o.s,0.5);g.fillCircle(38,40,34);
+    g.fillStyle(o.c,1);g.fillCircle(36,36,34);
+    g.lineStyle(4,o.h,0.9);g.strokeCircle(36,36,34);
+    g.fillStyle(0xffffff,0.35);g.fillEllipse(26,22,22,14);
+    g.fillStyle(0xffffff,0.15);g.fillEllipse(42,44,10,7);
+    g.generateTexture(o.n,76,76);g.destroy();
+  },this);
+
+  // Bomb texture 66px
+  const bg=this.make.graphics({x:0,y:0,add:false});
+  bg.fillStyle(0x220000,0.5);bg.fillCircle(33,35,29);
+  bg.fillStyle(0x222222,1);bg.fillCircle(30,32,29);
+  bg.fillStyle(0xff2020,1);bg.fillCircle(30,30,28);
+  bg.lineStyle(3,0xff6666,0.7);bg.strokeCircle(30,30,28);
+  bg.lineStyle(3,0x888888,1);bg.beginPath();bg.moveTo(30,2);bg.lineTo(36,10);bg.strokePath();
+  bg.fillStyle(0xffaa00,1);bg.fillCircle(36,10,6);
+  bg.fillStyle(0xffffff,0.2);bg.fillEllipse(22,20,16,10);
+  bg.generateTexture('bomb',66,66);bg.destroy();
+
+  const pg=this.make.graphics({x:0,y:0,add:false});
+  pg.fillStyle(0xffffff,1);pg.fillCircle(5,5,5);pg.generateTexture('pt',10,10);pg.destroy();
+
+  const spk=this.make.graphics({x:0,y:0,add:false});
+  spk.fillStyle(0xffffff,1);spk.fillRect(3,0,2,8);spk.fillRect(0,3,8,2);
+  spk.generateTexture('spk',8,8);spk.destroy();
+
+  fruits=this.physics.add.group();
+  bombs=this.physics.add.group();
+  spawnTimer=this.time.addEvent({delay:spawnDelay,callback:spawnObject,callbackScope:this,loop:true});
+  clockTimer=this.time.addEvent({delay:1000,callback:updateClock,callbackScope:this,loop:true});
+}
+
+function update(){
+  if(isGameOver||!isGameRunning)return;
+  var seg;
+  while((seg=sliceQueue.shift()))doSlice.call(this,seg.x1,seg.y1,seg.x2,seg.y2);
+  fruits.children.iterate(function(f){if(!f||!f.active)return;if(f.y>GH+60){f.destroy();if(!isGameOver)loseLife.call(this);}},this);
+  bombs.children.iterate(function(b){if(!b||!b.active)return;if(b.y>GH+60)b.destroy();});
+}
+
+function doSlice(x1,y1,x2,y2){
+  fruits.children.iterate(function(f){
+    if(!f||!f.active)return;
+    if(segDist(f.x,f.y,x1,y1,x2,y2)<44){
+      burst.call(this,f.x,f.y,f.texture.key);f.destroy();
+      score+=hardMode?15:10;hudScore(score);
+      this.cameras.main.shake(25,0.003);
+    }
+  },this);
+  bombs.children.iterate(function(b){
+    if(!b||!b.active)return;
+    if(segDist(b.x,b.y,x1,y1,x2,y2)<38){bombBurst.call(this,b.x,b.y);b.destroy();loseLife.call(this);}
+  },this);
+}
+
+function segDist(px,py,x1,y1,x2,y2){
+  var dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy;
+  if(l2===0)return Math.hypot(px-x1,py-y1);
+  var t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/l2));
+  return Math.hypot(px-(x1+t*dx),py-(y1+t*dy));
+}
+
+function burst(x,y,key){
+  var tm={f0:0x00cc88,f1:0xff6b35,f2:0xffcc00,f3:0xcc44ff,f4:0xff3388,f5:0x44aaff};
+  var tint=tm[key]||0x00cc88;
+  for(var i=0;i<18;i++){
+    var p=this.physics.add.image(x,y,'pt');
+    var a=(i/18)*Math.PI*2,spd=Phaser.Math.Between(100,320);
+    p.setVelocity(Math.cos(a)*spd,Math.sin(a)*spd);p.setTint(tint);p.setScale(Phaser.Math.FloatBetween(0.5,1.8));
+    this.tweens.add({targets:p,alpha:0,scaleX:0,scaleY:0,duration:420+i*18,onComplete:function(tw,targets){if(targets[0].active)targets[0].destroy();}});
+  }
+  for(var j=0;j<8;j++){
+    var sp=this.physics.add.image(x+Phaser.Math.Between(-20,20),y+Phaser.Math.Between(-20,20),'spk');
+    var a2=(j/8)*Math.PI*2,spd2=Phaser.Math.Between(60,160);
+    sp.setVelocity(Math.cos(a2)*spd2,Math.sin(a2)*spd2);sp.setTint(0xffffff);sp.setScale(1.5);
+    this.tweens.add({targets:sp,alpha:0,duration:280,onComplete:function(tw,targets){if(targets[0].active)targets[0].destroy();}});
+  }
+  var txt=this.add.text(x,y-20,'+'+(hardMode?15:10),{fontSize:'22px',fill:'#ffffff',fontFamily:'Orbitron',fontStyle:'bold',stroke:'#000',strokeThickness:3}).setOrigin(0.5).setDepth(15);
+  this.tweens.add({targets:txt,y:y-70,alpha:0,duration:700,onComplete:function(){txt.destroy();}});
+}
+
+function bombBurst(x,y){
+  for(var i=0;i<22;i++){
+    var p=this.physics.add.image(x,y,'pt');
+    var a=(i/22)*Math.PI*2,spd=Phaser.Math.Between(120,360);
+    p.setVelocity(Math.cos(a)*spd,Math.sin(a)*spd);
+    p.setTint(i%2===0?0xff3333:0xff8800);p.setScale(Phaser.Math.FloatBetween(0.8,2.5));
+    this.tweens.add({targets:p,alpha:0,scaleX:0,scaleY:0,duration:550+i*15,onComplete:function(tw,targets){if(targets[0].active)targets[0].destroy();}});
+  }
+  var flash=this.add.graphics();flash.fillStyle(0xff4400,0.35);flash.fillCircle(x,y,120);
+  this.tweens.add({targets:flash,alpha:0,duration:300,onComplete:function(){flash.destroy();}});
+  this.cameras.main.shake(180,0.014);this.cameras.main.flash(200,255,50,0,false);
+}
+
+function loseLife(){
+  if(isGameOver)return;
+  lives--;if(lives<0)lives=0;
+  updateHearts(lives);this.cameras.main.shake(120,0.009);
+  if(lives<=0)triggerGameOver.call(this);
+}
+
+function spawnObject(){
+  if(isGameOver||!isGameRunning)return;
+  var count=hardMode?Phaser.Math.Between(2,5):Phaser.Math.Between(1,3);
+  for(var c=0;c<count;c++){
+    var x=Phaser.Math.Between(70,GW-70);
+    var isBomb=Phaser.Math.Between(1,10)<=(hardMode?4:3);
+    var vy=hardMode?Phaser.Math.Between(180,320):Phaser.Math.Between(130,240);
+    var vx=Phaser.Math.Between(-50,50);
+    if(isBomb){
+      var b=bombs.create(x,-66,'bomb');
+      b.setCircle(29,4,4);b.setVelocityY(vy);b.setVelocityX(vx);b.setAngularVelocity(Phaser.Math.Between(-80,80));
+    }else{
+      var fk='f'+Phaser.Math.Between(0,5);
+      var f=fruits.create(x,-76,fk);
+      f.setCircle(34,4,4);f.setVelocityY(vy);f.setVelocityX(vx);f.setAngularVelocity(Phaser.Math.Between(-60,60));
+    }
+  }
+}
+
+function updateClock(){
+  if(isGameOver||!isGameRunning)return;
+  gameTime++;hudTime(gameTime);
+  if(gameTime===120&&!hardMode){hardMode=true;setHardMode(true);showHardAlert();}
+  if(gameTime%15===0&&spawnDelay>280){
+    spawnDelay-=hardMode?55:40;
+    if(spawnTimer)spawnTimer.destroy();
+    spawnTimer=pScene.time.addEvent({delay:Math.max(280,spawnDelay),callback:spawnObject,callbackScope:pScene,loop:true});
+  }
+}
+
+function showHardAlert(){
+  var s=pScene;
+  var ov=s.add.graphics();ov.fillStyle(0xff0000,0.08);ov.fillRect(0,0,GW,GH);
+  var txt=s.add.text(GW/2,GH/2,'HARD MODE ACTIVATED',{fontSize:'36px',fill:'#ff3333',fontFamily:'Orbitron',fontStyle:'bold',stroke:'#000',strokeThickness:4}).setOrigin(0.5).setAlpha(0).setDepth(20);
+  s.tweens.add({targets:txt,alpha:{from:0,to:1},duration:300,yoyo:true,hold:800,onComplete:function(){txt.destroy();ov.destroy();}});
+  s.cameras.main.flash(400,255,0,0,false);
+}
+
+function triggerGameOver(){
+  if(isGameOver)return;
+  isGameOver=true;pScene.physics.pause();
+  if(spawnTimer)spawnTimer.destroy();
+  if(clockTimer)clockTimer.destroy();
+  trailPts.length=0;sliceQueue.length=0;
+  document.getElementById('go-final-score').textContent=score.toLocaleString();
+  var m=Math.floor(gameTime/60),sc2=gameTime%60;
+  document.getElementById('go-final-time').textContent='Survived: '+m+':'+(sc2<10?'0':'')+sc2;
+  document.getElementById('dom-gameover-overlay').style.display='flex';
+  autoSubmitScore();
+}
+</script>
+</body>
+</html>
